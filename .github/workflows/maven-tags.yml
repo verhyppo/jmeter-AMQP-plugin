@@ -29,6 +29,8 @@ jobs:
     - name: Build with Maven
       id: maven-build
       run: mvn -B package -Drevision=${{ steps.gitversion.outputs.semVer }} --file pom.xml
+    - name: Codecov upload
+      run: bash <(curl -s https://codecov.io/bash)
     - name: Create Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:

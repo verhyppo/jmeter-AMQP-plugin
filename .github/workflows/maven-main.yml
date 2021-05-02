@@ -10,6 +10,8 @@ on:
 jobs:
   build-and-prerelease:
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
     steps:
     - uses: actions/checkout@v2
       with:
@@ -28,6 +30,8 @@ jobs:
     - name: Build with Maven
       id: maven-build
       run: mvn -B package -Drevision=${{ steps.gitversion.outputs.semVer }} --file pom.xml
+    - name: Codecov upload
+      run: bash <(curl -s https://codecov.io/bash)
     - name: Create Pre Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
@@ -38,3 +42,4 @@ jobs:
         files: |
           LICENSE
           target/*.jar
+
