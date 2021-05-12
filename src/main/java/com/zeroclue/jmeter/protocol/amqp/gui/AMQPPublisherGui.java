@@ -7,8 +7,9 @@ import org.apache.jmeter.testelement.TestElement;
 import org.apache.jorphan.gui.JLabeledTextArea;
 import org.apache.jorphan.gui.JLabeledTextField;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import java.awt.Dimension;
 
 /**
  * AMQP Sampler
