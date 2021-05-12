@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -34,25 +33,21 @@ import java.util.concurrent.TimeoutException;
  */
 public class AMQPPublisher extends AMQPSampler implements Interruptible {
 
+    public static final boolean DEFAULT_PERSISTENT = false;
+    public static final boolean DEFAULT_USE_TX = false;
     private static final long serialVersionUID = -8420658040465788497L;
-
     private static final Logger log = LoggerFactory.getLogger(AMQPPublisher.class);
-
     //++ These are JMX names, and must not be changed
-    private final static String MESSAGE = "AMQPPublisher.Message";
-    private final static String MESSAGE_ROUTING_KEY = "AMQPPublisher.MessageRoutingKey";
-    private final static String MESSAGE_TYPE = "AMQPPublisher.MessageType";
-    private final static String REPLY_TO_QUEUE = "AMQPPublisher.ReplyToQueue";
-    private final static String CONTENT_TYPE = "AMQPPublisher.ContentType";
-    private final static String CORRELATION_ID = "AMQPPublisher.CorrelationId";
-    private final static String MESSAGE_ID = "AMQPPublisher.MessageId";
-    private final static String HEADERS = "AMQPPublisher.Headers";
-
-    public static boolean DEFAULT_PERSISTENT = false;
-    private final static String PERSISTENT = "AMQPPublisher.Persistent";
-
-    public static boolean DEFAULT_USE_TX = false;
-    private final static String USE_TX = "AMQPPublisher.UseTx";
+    private static final String MESSAGE = "AMQPPublisher.Message";
+    private static final String MESSAGE_ROUTING_KEY = "AMQPPublisher.MessageRoutingKey";
+    private static final String MESSAGE_TYPE = "AMQPPublisher.MessageType";
+    private static final String REPLY_TO_QUEUE = "AMQPPublisher.ReplyToQueue";
+    private static final String CONTENT_TYPE = "AMQPPublisher.ContentType";
+    private static final String CORRELATION_ID = "AMQPPublisher.CorrelationId";
+    private static final String MESSAGE_ID = "AMQPPublisher.MessageId";
+    private static final String HEADERS = "AMQPPublisher.Headers";
+    private static final String PERSISTENT = "AMQPPublisher.Persistent";
+    private static final String USE_TX = "AMQPPublisher.UseTx";
 
     private transient Channel channel;
 
@@ -88,8 +83,6 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
             return result;
         }
 
-        String data = getMessage(); // Sampler data
-
         result.setSampleLabel(getTitle());
         /*
          * Perform the sampling
@@ -117,19 +110,18 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
             /*
              * Set up the sample result details
              */
-            result.setSamplerData(data);
-            result.setResponseData(new String(messageBytes), StandardCharsets.UTF_8.displayName());
+            result.setSamplerData("see sub sample for details...");
             result.setDataType(SampleResult.TEXT);
 
             result.setResponseCodeOK();
             result.setResponseMessage("OK");
             result.setSampleCount(loop);
             result.setSuccessful(Arrays.stream(result.getSubResults())
-                    .allMatch(SampleResult::isSuccessful));
+                                       .allMatch(SampleResult::isSuccessful));
         } catch (Exception ex) {
             log.error("Exception during execution", ex);
             result.setResponseCode("000");
-            result.setResponseMessage(ex.toString());
+            result.setResponseMessage(ex.getMessage());
         } finally {
             result.sampleEnd(); // End timimg
         }
@@ -144,10 +136,9 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
         try {
             log.info("publish: {}, {}", getExchange(), getMessageRoutingKey());
             channel.basicPublish(getExchange(), getMessageRoutingKey(), messageProperties, messageBytes);
-            subSample.setSuccessful(true);
-            subSample.setSamplerData("Message idx published");
+            subSample.setSamplerData(label + "published ");
+            subSample.setResponseOK();
         } catch (IOException ex) {
-            subSample.setSuccessful(false);
             subSample.setSamplerData(ex.getMessage());
         }
         return subSample;
@@ -240,7 +231,7 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
         setProperty(new TestElementProperty(HEADERS, headers));
     }
 
-    public Boolean getPersistent() {
+    public boolean getPersistent() {
         return getPropertyAsBoolean(PERSISTENT, DEFAULT_PERSISTENT);
     }
 
@@ -248,7 +239,7 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
         setProperty(PERSISTENT, persistent);
     }
 
-    public Boolean getUseTx() {
+    public boolean getUseTx() {
         return getPropertyAsBoolean(USE_TX, DEFAULT_USE_TX);
     }
 
@@ -279,19 +270,20 @@ public class AMQPPublisher extends AMQPSampler implements Interruptible {
         final String contentType = StringUtils.defaultIfEmpty(getContentType(), "text/plain");
 
         builder.contentType(contentType)
-                .deliveryMode(deliveryMode)
-                .priority(0)
-                .correlationId(getCorrelationId())
-                .replyTo(getReplyToQueue())
-                .type(getMessageType())
-                .headers(prepareHeaders())
-                .build();
+               .deliveryMode(deliveryMode)
+               .priority(0)
+               .correlationId(getCorrelationId())
+               .replyTo(getReplyToQueue())
+               .type(getMessageType())
+               .headers(prepareHeaders())
+               .build();
         if (getMessageId() != null && !getMessageId().isEmpty()) {
             builder.messageId(getMessageId());
         }
         return builder.build();
     }
 
+    @Override
     protected boolean initChannel() throws IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
         boolean ret = super.initChannel();
         if (getUseTx()) {

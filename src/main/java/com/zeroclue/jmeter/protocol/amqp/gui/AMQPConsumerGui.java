@@ -11,28 +11,26 @@ import java.awt.*;
 public class AMQPConsumerGui extends AMQPSamplerGui {
 
     private static final long serialVersionUID = 1L;
-
-    protected JLabeledTextField receiveTimeout = new JLabeledTextField("Receive Timeout");
-    protected JLabeledTextField prefetchCount = new JLabeledTextField("Prefetch Count");
-
     private final JCheckBox purgeQueue = new JCheckBox("Purge Queue", false);
     private final JCheckBox autoAck = new JCheckBox("Auto ACK", true);
     private final JCheckBox readResponse = new JCheckBox("Read Response", AMQPConsumer.DEFAULT_READ_RESPONSE);
     private final JCheckBox useTx = new JCheckBox("Use Transactions?", AMQPConsumer.DEFAULT_USE_TX);
-
+    protected JLabeledTextField receiveTimeout = new JLabeledTextField("Receive Timeout");
+    protected JLabeledTextField prefetchCount = new JLabeledTextField("Prefetch Count");
     private JPanel mainPanel;
 
-    public AMQPConsumerGui(){
+    public AMQPConsumerGui() {
         init();
     }
 
     /*
      * Helper method to set up the GUI screen
      */
+    @Override
     protected void init() {
         super.init();
-        prefetchCount.setPreferredSize(new Dimension(100,25));
-        useTx.setPreferredSize(new Dimension(100,25));
+        prefetchCount.setPreferredSize(new Dimension(100, 25));
+        useTx.setPreferredSize(new Dimension(100, 25));
 
         mainPanel.add(receiveTimeout);
         mainPanel.add(prefetchCount);

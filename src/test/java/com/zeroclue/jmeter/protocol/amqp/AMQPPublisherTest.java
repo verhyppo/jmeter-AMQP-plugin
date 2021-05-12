@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class AMQPPublisherTest {
+class AMQPPublisherTest {
 
     private static final Logger logger = LoggerFactory.getLogger(AMQPPublisherTest.class);
 
@@ -64,11 +64,11 @@ public class AMQPPublisherTest {
 
     @ParameterizedTest(name = "collect {0} samples isSuccessful={1} with {0} messages (auto ack)")
     @CsvSource({
-                       "0, true",
-                       "10, true",
-                       "-1, true",
-                       "5, true",
-                       "1, true",
+                   "0, true",
+                   "10, true",
+                   "-1, true",
+                   "5, true",
+                   "1, true",
                })
     void collectSamples(String samples, boolean success) throws IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
         amqpPublisher.setIterations(samples);

@@ -23,30 +23,29 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
+@SuppressWarnings("java:S2160")
 public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStateListener {
-    private static final int DEFAULT_PREFETCH_COUNT = 0; // unlimited
-
     public static final boolean DEFAULT_READ_RESPONSE = true;
+    public static final String TIMESTAMP_PARAMETER = "Timestamp";
+    public static final String EXCHANGE_PARAMETER = "Exchange";
+    public static final String ROUTING_KEY_PARAMETER = "Routing Key";
+    public static final String DELIVERY_TAG_PARAMETER = "Delivery Tag";
+    public static final boolean DEFAULT_USE_TX = false;
+    private static final String E_001 = "AMQP consumer failed to consume";
+    private static final String E_002 = "Cannot consume messages";
+    private static final int DEFAULT_PREFETCH_COUNT = 0; // unlimited
     public static final String DEFAULT_PREFETCH_COUNT_STRING = Integer.toString(DEFAULT_PREFETCH_COUNT);
-
     private static final long serialVersionUID = 7480863561320459091L;
-
-    private static final Logger log = LoggerFactory.getLogger(AMQPPublisher.class);
-
+    private static final Logger log = LoggerFactory.getLogger(AMQPConsumer.class);
     //++ These are JMX names, and must not be changed
     private static final String PREFETCH_COUNT = "AMQPConsumer.PrefetchCount";
     private static final String READ_RESPONSE = "AMQPConsumer.ReadResponse";
     private static final String PURGE_QUEUE = "AMQPConsumer.PurgeQueue";
     private static final String AUTO_ACK = "AMQPConsumer.AutoAck";
     private static final String RECEIVE_TIMEOUT = "AMQPConsumer.ReceiveTimeout";
-    public static final String TIMESTAMP_PARAMETER = "Timestamp";
-    public static final String EXCHANGE_PARAMETER = "Exchange";
-    public static final String ROUTING_KEY_PARAMETER = "Routing Key";
-    public static final String DELIVERY_TAG_PARAMETER = "Delivery Tag";
-
-    public static boolean DEFAULT_USE_TX = false;
-    private final static String USE_TX = "AMQPConsumer.UseTx";
+    private static final String USE_TX = "AMQPConsumer.UseTx";
 
     private transient Channel channel;
     private transient String consumerTag;
@@ -108,25 +107,25 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
             result.setResponseCodeOK();
             result.setSampleCount(loop);
             result.setSuccessful(Arrays.stream(result.getSubResults())
-                    .allMatch(SampleResult::isSuccessful));
+                                       .allMatch(SampleResult::isSuccessful));
 
         } catch (ShutdownSignalException e) {
             consumerTag = null;
-            log.warn("AMQP consumer failed to consume", e);
+            log.warn(E_001, e);
             result.setResponseCode("400");
             result.setSuccessful(false);
             result.setResponseMessage(e.getMessage());
             interrupt();
         } catch (ConsumerCancelledException e) {
             consumerTag = null;
-            log.warn("AMQP consumer failed to consume", e);
+            log.warn(E_001, e);
             result.setResponseCode("300");
             result.setSuccessful(false);
             result.setResponseMessage(e.getMessage());
             interrupt();
         } catch (IOException e) {
             consumerTag = null;
-            log.warn("AMQP consumer failed to consume", e);
+            log.warn(E_001, e);
             result.setResponseCode("100");
             result.setSuccessful(false);
             result.setResponseMessage(e.getMessage());
@@ -140,44 +139,57 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
     }
 
     private SampleResult sample(String label, int receiveTimeoutAsInt) {
-        Instant timeoutTime = Instant.now().plus(receiveTimeoutAsInt, ChronoUnit.MILLIS);
-        trace("Sample Timeout: " + timeoutTime.toString());
+        Instant expiration = Instant.now().plus(receiveTimeoutAsInt, ChronoUnit.MILLIS);
+        trace("Sample Timeout: " + expiration.toString());
+
         SampleResult sample = new SampleResult();
         sample.setSampleLabel(label);
         sample.sampleStart();
-        while (timeoutTime.isAfter(Instant.now())) {
+
+        while (expiration.isAfter(Instant.now())) {
             trace("Timeout not expired, sampling new message");
+            GetResponse response;
             try {
-                GetResponse response = channel.basicGet(getQueue(), autoAck());
-                if (response != null) {
-                    log.info("Message dequeued");
-                    if (!autoAck()) {
-                        try {
-                            channel.basicAck(response.getEnvelope().getDeliveryTag(), false);
-                        } catch (IOException e) {
-                            return createErrorSample(sample, e.getMessage());
-                        }
-                    }
-                    return createSuccessSample(sample, response);
-                } else {
-                    trace("no message received, sleeping");
-                    try {
-                        trace("sleeping");
-                        Thread.sleep(500);
-                        trace("end sleep");
-                    } catch (InterruptedException e) {
-                        return createErrorSample(sample, e.getMessage());
-                    }
-                }
+                response = getAndAck(sample);
             } catch (IOException e) {
-                log.error("exception", e);
+                log.error(E_002, e);
                 return createErrorSample(sample, e.getMessage());
             }
-
+            if (response != null) {
+                return sample;
+            }
+            trace("no message received, sleeping");
+            try {
+                trace("sleeping");
+                Thread.sleep(500);
+                trace("end sleep");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return createErrorSample(sample, e.getMessage());
+            }
         }
         trace("Timeout expired");
         return createErrorSample(sample, "timed out");
 
+    }
+
+    private GetResponse getAndAck(SampleResult sample) throws IOException {
+        GetResponse response = channel.basicGet(getQueue(), autoAck());
+        if (response != null) {
+            log.info("Message dequeued");
+            if (!autoAck()) {
+                try {
+                    channel.basicAck(response.getEnvelope().getDeliveryTag(), false);
+                    createSuccessSample(sample, response);
+                } catch (IOException e) {
+                    createErrorSample(sample, e.getMessage());
+                }
+            } else {
+                createSuccessSample(sample, response);
+            }
+
+        }
+        return response;
     }
 
     private SampleResult createSuccessSample(SampleResult sampleResult, GetResponse response) {
@@ -189,31 +201,41 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
             sampleResult.setSamplerData("Body not available - \"Read Response\" set to false");
         }
         sampleResult.setResponseHeaders(formatHeaders(response.getProps(), response.getEnvelope()));
-        sampleResult.setSuccessful(true);
+        sampleResult.setResponseOK();
         return sampleResult;
     }
 
-    private SampleResult createErrorSample(SampleResult sample, String message) {
-        SampleResult result = new SampleResult();
+    private SampleResult createErrorSample(SampleResult result, String message) {
         result.setSuccessful(false);
+        result.setSamplerData(message);
         return result;
     }
 
     private String formatHeaders(AMQP.BasicProperties properties, Envelope envelope) {
 
         StringBuilder sb = new StringBuilder();
-        sb.append(TIMESTAMP_PARAMETER).append(": ")
-                .append(properties.getTimestamp() != null ? properties.getTimestamp().getTime() : "")
-                .append("\n");
-        sb.append(EXCHANGE_PARAMETER).append(": ").append(envelope.getExchange()).append("\n");
-        sb.append(ROUTING_KEY_PARAMETER).append(": ").append(envelope.getRoutingKey()).append("\n");
-        sb.append(DELIVERY_TAG_PARAMETER).append(": ").append(envelope.getDeliveryTag()).append("\n");
+        sb.append(TIMESTAMP_PARAMETER)
+          .append(": ")
+          .append(properties.getTimestamp() != null ? properties.getTimestamp().getTime() : "")
+          .append("\n");
+        sb.append(EXCHANGE_PARAMETER)
+          .append(": ")
+          .append(envelope.getExchange())
+          .append("\n");
+        sb.append(ROUTING_KEY_PARAMETER)
+          .append(": ")
+          .append(envelope.getRoutingKey()).append("\n");
+        sb.append(DELIVERY_TAG_PARAMETER)
+          .append(": ")
+          .append(envelope.getDeliveryTag())
+          .append("\n");
 
         Map<String, Object> headers = properties.getHeaders();
         if (headers != null) {
-            for (String key : headers.keySet()) {
-                sb.append(key).append(": ").append(headers.get(key)).append("\n");
-            }
+            sb.append(headers.entrySet()
+                             .stream()
+                             .map(e -> e.getKey() + ": " + e.getValue())
+                             .collect(Collectors.joining("\n")));
         }
         return sb.toString();
     }
@@ -294,21 +316,12 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
         return getPropertyAsInt(PREFETCH_COUNT);
     }
 
-    public Boolean getUseTx() {
+    public boolean getUseTx() {
         return getPropertyAsBoolean(USE_TX, DEFAULT_USE_TX);
     }
 
     public void setUseTx(Boolean tx) {
         setProperty(USE_TX, tx);
-    }
-
-    /**
-     * set whether the sampler should read the response or not
-     *
-     * @param read whether the sampler should read the response or not
-     */
-    public void setReadResponse(Boolean read) {
-        setProperty(READ_RESPONSE, read);
     }
 
     /**
@@ -318,6 +331,15 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
      */
     public String getReadResponse() {
         return getPropertyAsString(READ_RESPONSE);
+    }
+
+    /**
+     * set whether the sampler should read the response or not
+     *
+     * @param read whether the sampler should read the response or not
+     */
+    public void setReadResponse(Boolean read) {
+        setProperty(READ_RESPONSE, read);
     }
 
     /**
@@ -343,30 +365,31 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
     public void testEnded() {
 
         if (purgeQueue()) {
-            log.info("Purging queue " + getQueue());
+            log.info("Purging queue {}", getQueue());
             try {
                 channel.queuePurge(getQueue());
             } catch (IOException e) {
-                log.error("Failed to purge queue " + getQueue(), e);
+                log.error("Failed to purge queue" + getQueue(), e);
             }
         }
     }
 
     @Override
     public void testEnded(String arg0) {
-
+        //nothing to do
     }
 
     @Override
     public void testStarted() {
-
+        //nothing to do
     }
 
     @Override
     public void testStarted(String arg0) {
-
+        //nothing to do
     }
 
+    @Override
     public void cleanup() {
 
         try {
@@ -388,11 +411,12 @@ public class AMQPConsumer extends AMQPSampler implements Interruptible, TestStat
         String tl = getTitle();
         String tn = Thread.currentThread().getName();
         String th = this.toString();
-        log.debug(tn + " " + tl + " " + s + " " + th);
+        log.debug("{} {} {} {}", tn, tl, s, th);
     }
 
+    @Override
     protected boolean initChannel() throws
-            IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
+                                    IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
         boolean ret = super.initChannel();
         channel.basicQos(getPrefetchCountAsInt());
         if (getUseTx()) {

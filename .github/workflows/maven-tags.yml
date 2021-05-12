@@ -4,39 +4,39 @@
 name: tagged-release
 
 on:
-  push:
-    tags:
-      - "v*"
+    push:
+        tags:
+            - "v*"
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9.7
-      with:
-        versionSpec: '5.6.8'
-    - name: Determine Version
-      id: gitversion
-      uses: gittools/actions/gitversion/execute@v0.9.7
-    - name: Build with Maven
-      id: maven-build
-      run: mvn -B package -Drevision=${{ steps.gitversion.outputs.semVer }} --file pom.xml
-    - name: Codecov upload
-      run: bash <(curl -s https://codecov.io/bash)
-    - name: Create Release
-      uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-        title: "v${{ steps.gitversion.outputs.semVer }}"
-        files: |
-          LICENSE
-          target/*.jar
+    build-and-release:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v2
+                with:
+                    fetch-depth: 0
+            -   name: Set up JDK 1.8
+                uses: actions/setup-java@v1
+                with:
+                    java-version: 1.8
+            -   name: Install GitVersion
+                uses: gittools/actions/gitversion/setup@v0.9.7
+                with:
+                    versionSpec: '5.6.8'
+            -   name: Determine Version
+                id: gitversion
+                uses: gittools/actions/gitversion/execute@v0.9.7
+            -   name: Build with Maven
+                id: maven-build
+                run: mvn -B package -Drevision=${{ steps.gitversion.outputs.semVer }} --file pom.xml
+            -   name: Codecov upload
+                run: bash <(curl -s https://codecov.io/bash)
+            -   name: Create Release
+                uses: "marvinpinto/action-automatic-releases@latest"
+                with:
+                    repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                    prerelease: false
+                    title: "v${{ steps.gitversion.outputs.semVer }}"
+                    files: |
+                        LICENSE
+                        target/*.jar

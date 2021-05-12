@@ -1,52 +1,40 @@
 package com.zeroclue.jmeter.protocol.amqp.gui;
 
-import java.awt.Dimension;
-
-import javax.swing.*;
-
+import com.zeroclue.jmeter.protocol.amqp.AMQPPublisher;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.config.gui.ArgumentsPanel;
 import org.apache.jmeter.testelement.TestElement;
 import org.apache.jorphan.gui.JLabeledTextArea;
 import org.apache.jorphan.gui.JLabeledTextField;
 
-import com.zeroclue.jmeter.protocol.amqp.AMQPPublisher;
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * AMQP Sampler
- *
+ * <p>
  * This class is responsible for ensuring that the Sampler data is kept in step
  * with the GUI.
- *
+ * <p>
  * The GUI class is not invoked in non-GUI mode, so it should not perform any
  * additional setup that a test would need at run-time
- *
  */
 public class AMQPPublisherGui extends AMQPSamplerGui {
 
     private static final long serialVersionUID = 1L;
-
+    private final JLabeledTextArea message = new JLabeledTextArea("Message Content");
+    private final JLabeledTextField messageRoutingKey = new JLabeledTextField("Routing Key");
+    private final JLabeledTextField messageType = new JLabeledTextField("Message Type");
+    private final JLabeledTextField replyToQueue = new JLabeledTextField("Reply-To Queue");
+    private final JLabeledTextField correlationId = new JLabeledTextField("Correlation Id");
+    private final JLabeledTextField contentType = new JLabeledTextField("ContentType");
+    private final JLabeledTextField messageId = new JLabeledTextField("Message Id");
+    private final JCheckBox persistent = new JCheckBox("Persistent?", AMQPPublisher.DEFAULT_PERSISTENT);
+    private final JCheckBox useTx = new JCheckBox("Use Transactions?", AMQPPublisher.DEFAULT_USE_TX);
+    private final ArgumentsPanel headers = new ArgumentsPanel("Headers");
     private JPanel mainPanel;
 
-    /*
-    private static final String[] CONFIG_CHOICES = {"File", "Static"};
-    private final JLabeledRadio configChoice = new JLabeledRadio("Message Source", CONFIG_CHOICES);
-    private final FilePanel messageFile = new FilePanel("Filename", ALL_FILES);
-    */
-    private JLabeledTextArea message = new JLabeledTextArea("Message Content");
-    private JLabeledTextField messageRoutingKey = new JLabeledTextField("Routing Key");
-    private JLabeledTextField messageType = new JLabeledTextField("Message Type");
-    private JLabeledTextField replyToQueue = new JLabeledTextField("Reply-To Queue");
-    private JLabeledTextField correlationId = new JLabeledTextField("Correlation Id");
-    private JLabeledTextField contentType = new JLabeledTextField("ContentType");
-    private JLabeledTextField messageId = new JLabeledTextField("Message Id");
-
-    private JCheckBox persistent = new JCheckBox("Persistent?", AMQPPublisher.DEFAULT_PERSISTENT);
-    private JCheckBox useTx = new JCheckBox("Use Transactions?", AMQPPublisher.DEFAULT_USE_TX);
-
-    private ArgumentsPanel headers = new ArgumentsPanel("Headers");
-
-    public AMQPPublisherGui(){
+    public AMQPPublisherGui() {
         init();
     }
 
@@ -120,7 +108,7 @@ public class AMQPPublisherGui extends AMQPSamplerGui {
     }
 
     @Override
-    protected void setMainPanel(JPanel panel){
+    protected void setMainPanel(JPanel panel) {
         mainPanel = panel;
     }
 
@@ -170,8 +158,7 @@ public class AMQPPublisherGui extends AMQPSamplerGui {
         message.setText("");
     }
 
-    private void configureHeaders(AMQPPublisher sampler)
-    {
+    private void configureHeaders(AMQPPublisher sampler) {
         Arguments sampleHeaders = sampler.getHeaders();
         if (sampleHeaders != null) {
             headers.configure(sampleHeaders);

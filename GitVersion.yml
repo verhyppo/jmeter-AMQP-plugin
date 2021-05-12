@@ -1,6 +1,6 @@
 mode: Mainline
 branches:
-  master: {}
+    master: { }
 ignore:
-  sha: []
-merge-message-formats: {}
+    sha: [ ]
+merge-message-formats: { }

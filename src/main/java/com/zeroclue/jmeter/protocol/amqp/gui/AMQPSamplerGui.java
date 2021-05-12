@@ -1,6 +1,5 @@
 package com.zeroclue.jmeter.protocol.amqp.gui;
 
-import com.zeroclue.jmeter.protocol.amqp.AMQPPublisher;
 import com.zeroclue.jmeter.protocol.amqp.AMQPSampler;
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jmeter.samplers.gui.AbstractSamplerGui;
@@ -17,31 +16,27 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Logger log = LoggerFactory.getLogger(AMQPPublisher.class);
-
-    protected JLabeledTextField exchange = new JLabeledTextField("Exchange");
+    private static final Logger log = LoggerFactory.getLogger(AMQPSamplerGui.class);
     private final JCheckBox exchangeRedeclare = new JCheckBox("Redeclare?", AMQPSampler.DEFAULT_EXCHANGE_REDECLARE);
-    protected JLabeledTextField queue = new JLabeledTextField("Queue");
-    protected JLabeledTextField routingKey = new JLabeledTextField("Routing Key");
-    protected JLabeledTextField virtualHost = new JLabeledTextField("Virtual Host");
-    protected JLabeledTextField messageTTL = new JLabeledTextField("Message TTL");
-    protected JLabeledTextField messageExpires = new JLabeledTextField("Expires");
-    protected JLabeledChoice exchangeType = new JLabeledChoice("Exchange Type", new String[]{ "direct", "topic", "headers", "fanout"});
     private final JCheckBox exchangeDurable = new JCheckBox("Durable?", AMQPSampler.DEFAULT_EXCHANGE_DURABLE);
     private final JCheckBox exchangeAutoDelete = new JCheckBox("Auto Delete?", AMQPSampler.DEFAULT_EXCHANGE_AUTO_DELETE);
     private final JCheckBox queueDurable = new JCheckBox("Durable?", true);
     private final JCheckBox queueRedeclare = new JCheckBox("Redeclare?", AMQPSampler.DEFAULT_QUEUE_REDECLARE);
     private final JCheckBox queueExclusive = new JCheckBox("Exclusive", true);
     private final JCheckBox queueAutoDelete = new JCheckBox("Auto Delete?", true);
-
+    private final JCheckBox ssl = new JCheckBox("SSL?", false);
+    protected JLabeledTextField exchange = new JLabeledTextField("Exchange");
+    protected JLabeledTextField queue = new JLabeledTextField("Queue");
+    protected JLabeledTextField routingKey = new JLabeledTextField("Routing Key");
+    protected JLabeledTextField virtualHost = new JLabeledTextField("Virtual Host");
+    protected JLabeledTextField messageTTL = new JLabeledTextField("Message TTL");
+    protected JLabeledTextField messageExpires = new JLabeledTextField("Expires");
+    protected JLabeledChoice exchangeType = new JLabeledChoice("Exchange Type", new String[]{"direct", "topic", "headers", "fanout"});
     protected JLabeledTextField host = new JLabeledTextField("Host");
     protected JLabeledTextField port = new JLabeledTextField("Port");
     protected JLabeledTextField timeout = new JLabeledTextField("Timeout");
     protected JLabeledTextField username = new JLabeledTextField("Username");
     protected JLabeledTextField password = new JLabeledTextField("Password");
-    private final JCheckBox SSL = new JCheckBox("SSL?", false);
-
-
 
     protected abstract void setMainPanel(JPanel panel);
 
@@ -75,7 +70,7 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
         port.setText(sampler.getPort());
         username.setText(sampler.getUsername());
         password.setText(sampler.getPassword());
-        SSL.setSelected(sampler.connectionSSL());
+        ssl.setSelected(sampler.connectionSSL());
         log.info("AMQPSamplerGui.configure() called");
     }
 
@@ -106,7 +101,7 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
         port.setText(AMQPSampler.DEFAULT_PORT_STRING);
         username.setText("guest");
         password.setText("guest");
-        SSL.setSelected(false);
+        ssl.setSelected(false);
     }
 
     /**
@@ -139,8 +134,10 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
         sampler.setPort(port.getText());
         sampler.setUsername(username.getText());
         sampler.setPassword(password.getText());
-        sampler.setConnectionSSL(SSL.isSelected());
-        log.info("AMQPSamplerGui.modifyTestElement() called, set user/pass to " + username.getText() + "/" + password.getText() + " on sampler " + sampler);
+        sampler.setConnectionSSL(ssl.isSelected());
+        log.info("AMQPSamplerGui.modifyTestElement() called, " +
+                 "set user/pass to {}/{} on sampler {}",
+                 username.getText(), password.getText(), sampler);
     }
 
     protected void init() {
@@ -158,14 +155,14 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
     }
 
     private Component makeCommonPanel() {
-        GridBagConstraints gridBagConstraints, gridBagConstraintsCommon;
+        GridBagConstraints gridBagConstraints = new GridBagConstraints();
+        GridBagConstraints gridBagConstraintsCommon = new GridBagConstraints();
 
-        gridBagConstraintsCommon = new GridBagConstraints();
+
         gridBagConstraintsCommon.fill = GridBagConstraints.HORIZONTAL;
         gridBagConstraintsCommon.anchor = GridBagConstraints.WEST;
         gridBagConstraintsCommon.weightx = 0.5;
 
-        gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.insets = new java.awt.Insets(2, 2, 2, 2);
         gridBagConstraints.fill = GridBagConstraints.NONE;
         gridBagConstraints.anchor = GridBagConstraints.WEST;
@@ -258,7 +255,7 @@ public abstract class AMQPSamplerGui extends AbstractSamplerGui {
 
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 2;
-        serverSettings.add(SSL, gridBagConstraints);
+        serverSettings.add(ssl, gridBagConstraints);
 
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 3;

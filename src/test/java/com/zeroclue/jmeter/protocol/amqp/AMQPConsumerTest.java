@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class AMQPConsumerTest {
+class AMQPConsumerTest {
 
     private final static Logger logger = LoggerFactory.getLogger(AMQPConsumerTest.class);
     private static final String ROUTING_KEY = "routingKey";
@@ -70,12 +70,12 @@ public class AMQPConsumerTest {
 
     @ParameterizedTest(name = "initChannel with useTx={0} and prefetchCount={1}")
     @CsvSource({
-                       "true,    1",
-                       "false,    1",
-                       "true,    -1000",
-                       "false,    -1000",
-                       "true,    0",
-                       "false,    0",
+                   "true,    1",
+                   "false,    1",
+                   "true,    -1000",
+                   "false,    -1000",
+                   "true,    0",
+                   "false,    0",
                })
     void instantiateConsumerWithTransactions(boolean useTx, String prefetchCount) {
         amqpConsumer.setUseTx(useTx);
@@ -116,11 +116,11 @@ public class AMQPConsumerTest {
 
     @ParameterizedTest(name = "collect {0} samples isSuccessful={1} with {0} messages (auto ack)")
     @CsvSource({
-                       "0, true",
-                       "10, true",
-                       "-1, true",
-                       "5, true",
-                       "1, true",
+                   "0, true",
+                   "10, true",
+                   "-1, true",
+                   "5, true",
+                   "1, true",
                })
     void collectSamplesAutoAck(String samples, boolean success) throws IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
         amqpConsumer.setAutoAck("true");
@@ -135,11 +135,11 @@ public class AMQPConsumerTest {
 
     @ParameterizedTest(name = "collect {0} samples isSuccessful={1} with {0} messages (no auto ack)")
     @CsvSource({
-                       "0, true",
-                       "10, true",
-                       "-1, true",
-                       "5, true",
-                       "1, true",
+                   "0, true",
+                   "10, true",
+                   "-1, true",
+                   "5, true",
+                   "1, true",
                })
     void collectSamplesNoAutoAck(String samples, boolean success) throws IOException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
         amqpConsumer.setAutoAck("false");
@@ -157,10 +157,10 @@ public class AMQPConsumerTest {
                  .forEach(it -> {
                      try {
                          channel.basicPublish(
-                                 EXCHANGE,
-                                 ROUTING_KEY,
-                                 new AMQP.BasicProperties(),
-                                 ("Message #" + it).getBytes(StandardCharsets.UTF_8));
+                             EXCHANGE,
+                             ROUTING_KEY,
+                             new AMQP.BasicProperties(),
+                             ("Message #" + it).getBytes(StandardCharsets.UTF_8));
                      } catch (IOException e) {
                          throw new RuntimeException(e);
                      }
